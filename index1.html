@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Danh sách sinh viên</title>
+
+    <!-- Thư viện đọc Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>📋 Danh sách sinh viên</h2>
+
+    <input type="file" id="fileInput" accept=".xlsx">
+
+    <table id="table">
+        <tr>
+            <th>Họ tên</th>
+            <th>Mã SV</th>
+            <th>Email</th>
+            <th>Khóa</th>
+            <th>Khoa</th>
+        </tr>
+    </table>
+</div>
+
+<script>
+// ===== CLASS SINH VIÊN =====
+class Student {
+    constructor(fullName, studentId) {
+        this.fullName = fullName;
+        this.studentId = studentId;
+    }
+
+    // BỎ DẤU TIẾNG VIỆT
+    removeVietnameseTones(str) {
+        return str.normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/đ/g, "d")
+            .replace(/Đ/g, "D");
+    }
+
+    // TẠO EMAIL
+    generateEmail() {
+        let cleanName = this.removeVietnameseTones(this.fullName);
+
+        let parts = cleanName.trim().toLowerCase().split(" ");
+        let lastName = parts.pop(); // tên (Yến)
+        let initials = parts.map(w => w[0]).join(""); // h + n
+
+        return lastName + initials + "." + this.studentId.toLowerCase() + "@hvnh.edu.vn";
+    }
+
+    // KHÓA
+    getCourse() {
+        return "K" + this.studentId.substring(0, 2);
+    }
+
+    // KHOA
+    getFaculty() {
+        let code = this.studentId.substring(2, 4);
+
+        switch(code) {
+            case "A4": return "Công nghệ thông tin";
+            case "A1": return "Tài chính";
+            case "A2": return "Ngân hàng";
+            default: return "Khác";
+        }
+    }
+}
+
+// ===== ĐỌC FILE EXCEL =====
+document.getElementById("fileInput").addEventListener("change", function(e) {
+    let file = e.target.files[0];
+    let reader = new FileReader();
+
+    reader.onload = function(e) {
+        let data = new Uint8Array(e.target.result);
+        let workbook = XLSX.read(data, { type: "array" });
+
+        let sheet = workbook.Sheets[workbook.SheetNames[0]];
+        let json = XLSX.utils.sheet_to_json(sheet);
+
+        let table = document.getElementById("table");
+
+        // reset bảng
+        table.innerHTML = `
+            <tr>
+                <th>Họ tên</th>
+                <th>Mã SV</th>
+                <th>Email</th>
+                <th>Khóa</th>
+                <th>Khoa</th>
+            </tr>
+        `;
+
+        // DUYỆT
+        json.forEach(row => {
+            let student = new Student(row["Họ tên"], row["Mã SV"]);
+
+            let tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${student.fullName}</td>
+                <td>${student.studentId}</td>
+                <td>${student.generateEmail()}</td>
+                <td>${student.getCourse()}</td>
+                <td>${student.getFaculty()}</td>
+            `;
+
+            table.appendChild(tr);
+        });
+    };
+
+    reader.readAsArrayBuffer(file);
+});
+</script>
+
+</body>
+</html>
